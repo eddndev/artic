@@ -1,0 +1,36 @@
+{
+  "name": "@artic/runtime",
+  "version": "0.1.0",
+  "description": "Artic client-side runtime library",
+  "main": "dist/runtime.min.js",
+  "types": "dist/runtime.d.ts",
+  "scripts": {
+    "build": "esbuild src/runtime.ts --bundle --minify --outfile=dist/runtime.min.js --format=esm",
+    "build:dev": "esbuild src/runtime.ts --bundle --outfile=dist/runtime.js --format=esm --sourcemap",
+    "watch": "esbuild src/runtime.ts --bundle --outfile=dist/runtime.js --format=esm --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "artic",
+    "runtime",
+    "reactivity",
+    "signals"
+  ],
+  "author": "Achronyme Team",
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.19.0",
+    "typescript": "^5.2.0"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/runtime.min.js",
+      "types": "./dist/runtime.d.ts"
+    }
+  }
+}

@@ -1,0 +1,106 @@
+@route("/counter")
+
+let count = $state(0)
+
+@client
+let increment = () => count++
+
+@client
+let decrement = () => count--
+
+@client
+let reset = () => count = 0
+
+@utility
+container {
+    flex flex-col
+    items:center
+    gap:6
+    p:8
+    min-h:screen
+    bg:gray-50
+}
+
+@utility
+title {
+    text:5xl
+    font:extrabold
+    text:gray-900
+}
+
+@utility
+count_display {
+    text:6xl
+    font:mono
+    text:blue-600
+    font:bold
+}
+
+@utility
+btn {
+    px:6 py:3
+    font:semibold
+    rounded:lg
+    transition:all
+    cursor:pointer
+    border:none
+}
+
+@utility
+btn_primary {
+    btn
+    bg:blue-600
+    text:white
+    hover:bg:blue-700
+    active:scale:95
+}
+
+@utility
+btn_secondary {
+    btn
+    bg:gray-200
+    text:gray-900
+    hover:bg:gray-300
+    active:scale:95
+}
+
+@utility
+btn_danger {
+    btn
+    bg:red-600
+    text:white
+    hover:bg:red-700
+    active:scale:95
+}
+
+<div class:(container)>
+    <h1 class:(title)>Interactive Counter</h1>
+
+    <div class:(count_display)>
+        {count}
+    </div>
+
+    <div class:(flex gap:3)>
+        <button class:(btn_primary) on:click={increment}>
+            Increment
+        </button>
+
+        <button class:(btn_secondary) on:click={reset}>
+            Reset
+        </button>
+
+        <button class:(btn_danger) on:click={decrement}>
+            Decrement
+        </button>
+    </div>
+
+    <div class:(text:sm text:gray-600)>
+        {count === 0 ? (
+            <p>Start counting!</p>
+        ) : count > 0 ? (
+            <p>Positive: +{count}</p>
+        ) : (
+            <p>Negative: {count}</p>
+        )}
+    </div>
+</div>

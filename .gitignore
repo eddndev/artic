@@ -1,0 +1,74 @@
+# Claude Code
+.claude/
+
+# Build directories
+build/
+dist/
+out/
+bin/
+lib/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compiled Object files
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Static libraries
+*.a
+*.lib
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node.js (for runtime/client)
+node_modules/
+package-lock.json
+yarn.lock
+
+# vcpkg
+vcpkg_installed/
+
+# Testing
+*.gcda
+*.gcno
+*.gcov
+coverage/
+
+# Benchmarks
+*.perf
+
+# Generated files
+*.generated.cpp
+*.generated.h
+
+# OS specific
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup

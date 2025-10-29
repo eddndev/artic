@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+  build-binaries:
+    name: Build Release Binaries
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, macos-13, windows-2022]
+        include:
+          - os: ubuntu-22.04
+            artifact_name: artic-linux-x64
+            asset_name: artic-linux-x64.tar.gz
+          - os: macos-13
+            artifact_name: artic-macos-x64
+            asset_name: artic-macos-x64.tar.gz
+          - os: windows-2022
+            artifact_name: artic-windows-x64
+            asset_name: artic-windows-x64.zip
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v1.14
+      with:
+        cmake-version: '3.25.x'
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgGitCommitId: 'latest'
+
+    - name: Build
+      run: |
+        cmake -B build -S . \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DARTIC_BUILD_TESTS=OFF \
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+        cmake --build build --config Release -j 4
+
+    - name: Package (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        mkdir -p package
+        cp build/artic package/
+        cp LICENSE package/
+        cp README.md package/
+        cd package
+        tar -czf ../${{ matrix.asset_name }} *
+
+    - name: Package (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        mkdir package
+        cp build/Release/artic.exe package/
+        cp LICENSE package/
+        cp README.md package/
+        cd package
+        7z a ../${{ matrix.asset_name }} *
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ./${{ matrix.asset_name }}
+        asset_name: ${{ matrix.asset_name }}
+        asset_content_type: application/octet-stream
