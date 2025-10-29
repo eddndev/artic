@@ -1,4 +1,4 @@
-#include "Token.h"
+#include "frontend/lexer/Token.h"
 #include <sstream>
 
 namespace artic {
