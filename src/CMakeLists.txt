@@ -1,13 +1,16 @@
 # Artic Compiler Library
-# Phase 1: Only Lexer is implemented
+# Phase 1: Lexer and Parser implemented
 add_library(artic_compiler STATIC
     # Frontend - Lexer
     frontend/lexer/Lexer.cpp
     frontend/lexer/Token.cpp
 
+    # Frontend - Parser
+    frontend/parser/Parser.cpp
+
+    # Note: AST classes are header-only (no .cpp files needed)
+
     # More modules will be added as we implement them
-    # frontend/parser/Parser.cpp
-    # frontend/ast/Component.cpp
     # backend/css/CssGenerator.cpp
     # etc...
 )
