@@ -38,8 +38,18 @@ target_link_libraries(html_generator_tests PRIVATE
     artic_compiler
 )
 
+# Compiler tests
+add_executable(compiler_tests
+    unit/compiler/CompilerTest.cpp
+)
+
+target_link_libraries(compiler_tests PRIVATE
+    artic_compiler
+)
+
 # Add tests to CTest
 add_test(NAME LexerTests COMMAND lexer_tests)
 add_test(NAME ParserTests COMMAND parser_tests)
 add_test(NAME CssGeneratorTests COMMAND css_generator_tests)
 add_test(NAME HtmlGeneratorTests COMMAND html_generator_tests)
+add_test(NAME CompilerTests COMMAND compiler_tests)

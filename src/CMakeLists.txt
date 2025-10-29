@@ -1,5 +1,5 @@
 # Artic Compiler Library
-# Phase 1: Lexer, Parser, CSS Generator, and HTML Generator implemented
+# Phase 1: Complete SSG pipeline implemented
 add_library(artic_compiler STATIC
     # Frontend - Lexer
     frontend/lexer/Lexer.cpp
@@ -17,9 +17,11 @@ add_library(artic_compiler STATIC
     # Backend - HTML Generator
     backend/html/HtmlGenerator.cpp
 
-    # More modules will be added as we implement them
-    # compiler/Compiler.cpp
-    # etc...
+    # Compiler - Orchestrator
+    compiler/Compiler.cpp
+
+    # Shared - Utilities
+    shared/utils/FileSystem.cpp
 )
 
 target_include_directories(artic_compiler PUBLIC
