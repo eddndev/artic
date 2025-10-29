@@ -1,5 +1,5 @@
 # Artic Compiler Library
-# Phase 1: Lexer and Parser implemented
+# Phase 1: Lexer, Parser, CSS Generator, and HTML Generator implemented
 add_library(artic_compiler STATIC
     # Frontend - Lexer
     frontend/lexer/Lexer.cpp
@@ -10,8 +10,15 @@ add_library(artic_compiler STATIC
 
     # Note: AST classes are header-only (no .cpp files needed)
 
+    # Backend - CSS Generator
+    backend/css/UtilityResolver.cpp
+    backend/css/CssGenerator.cpp
+
+    # Backend - HTML Generator
+    backend/html/HtmlGenerator.cpp
+
     # More modules will be added as we implement them
-    # backend/css/CssGenerator.cpp
+    # compiler/Compiler.cpp
     # etc...
 )
 
