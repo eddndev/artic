@@ -1,0 +1,46 @@
+{
+  "name": "artic-language",
+  "displayName": "Artic Language Support",
+  "description": "Syntax highlighting and language support for Artic (.atc) files",
+  "version": "0.1.0",
+  "publisher": "achronyme",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "artic",
+    "atc",
+    "web development",
+    "full-stack"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "artic",
+        "aliases": [
+          "Artic",
+          "artic"
+        ],
+        "extensions": [
+          ".atc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "artic",
+        "scopeName": "source.artic",
+        "path": "./syntaxes/artic.tmLanguage.json"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/achronyme/artic"
+  },
+  "license": "MIT"
+}
