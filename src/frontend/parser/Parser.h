@@ -118,6 +118,31 @@ private:
     std::unique_ptr<NamedImport> parseNamedImport();
 
     /**
+     * @brief Parse props block (optional)
+     */
+    void parseProps(Component* component);
+
+    /**
+     * @brief Parse props { ... } block
+     */
+    std::unique_ptr<PropsBlock> parsePropsBlock();
+
+    /**
+     * @brief Parse single prop declaration: name: type
+     */
+    std::unique_ptr<PropDeclaration> parsePropDeclaration();
+
+    /**
+     * @brief Parse prop type (string, number, etc.)
+     */
+    std::unique_ptr<PropType> parsePropType();
+
+    /**
+     * @brief Collect tokens until one of the stop tokens is found
+     */
+    std::string collectUntil(const std::vector<TokenType>& stopTokens);
+
+    /**
      * @brief Parse utility declarations
      */
     void parseUtilities(Component* component);
@@ -163,6 +188,11 @@ private:
     std::unique_ptr<ClassDirective> parseClassDirective();
 
     /**
+     * @brief Parse slot directive: slot:name
+     */
+    std::unique_ptr<SlotDirective> parseSlotDirective();
+
+    /**
      * @brief Parse text node
      */
     std::unique_ptr<TextNode> parseTextNode();
@@ -171,6 +201,11 @@ private:
      * @brief Parse expression node: {expression}
      */
     std::unique_ptr<ExpressionNode> parseExpressionNode();
+
+    /**
+     * @brief Parse slot node: <slot /> or <slot:name />
+     */
+    std::unique_ptr<SlotNode> parseSlotNode();
 
     /**
      * @brief Collect text until < or { is found

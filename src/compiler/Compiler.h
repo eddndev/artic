@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "compiler/CompilerOptions.h"
+#include "compiler/ComponentRegistry.h"
 #include "frontend/lexer/Lexer.h"
 #include "frontend/parser/Parser.h"
 #include "frontend/ast/Component.h"
@@ -68,11 +69,13 @@ public:
 private:
     CompilerOptions m_options;
     std::string m_lastError;
+    ComponentRegistry m_registry;
 
     // Pipeline stages
     bool readSourceFile(std::string& source);
     std::vector<Token> lex(const std::string& source);
     std::unique_ptr<Component> parse(const std::vector<Token>& tokens);
+    Component* loadComponentWithRegistry(const std::string& filePath);
     std::string generateCss(Component* component);
     std::string generateHtml(Component* component);
     bool writeOutputFiles(const std::string& css, const std::string& html);

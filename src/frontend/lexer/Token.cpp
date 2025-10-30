@@ -10,6 +10,7 @@ const char* tokenTypeToString(TokenType type) {
         case TokenType::FROM: return "FROM";
         case TokenType::THEME: return "THEME";
         case TokenType::PROPS: return "PROPS";
+        case TokenType::SLOT: return "SLOT";
         case TokenType::EXPORT: return "EXPORT";
         case TokenType::AT_ROUTE: return "AT_ROUTE";
         case TokenType::AT_LAYOUT: return "AT_LAYOUT";

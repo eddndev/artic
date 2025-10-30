@@ -3,6 +3,7 @@
 #include "ASTNode.h"
 #include "Decorator.h"
 #include "Import.h"
+#include "Props.h"
 #include "Utility.h"
 #include "Template.h"
 #include <vector>
@@ -17,8 +18,9 @@ namespace artic {
  * Structure (in order):
  * 1. Metadata (decorators)
  * 2. Imports
- * 3. Styles (utility declarations)
- * 4. Template (required, must be last)
+ * 3. Props (optional, only for components)
+ * 4. Styles (utility declarations)
+ * 5. Template (required, must be last)
  */
 class Component : public ASTNode {
 public:
@@ -28,6 +30,9 @@ public:
 
     // Imports
     std::vector<std::unique_ptr<Import>> imports;
+
+    // Props (optional, only for reusable components)
+    std::unique_ptr<PropsBlock> props;
 
     // Styles
     std::vector<std::unique_ptr<UtilityDeclaration>> utilities;

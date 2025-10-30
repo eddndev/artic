@@ -1,0 +1,58 @@
+// Main app that uses imported Card component
+
+@route ("/cards")
+
+use { Card } from "./Card"
+
+@utility
+container {
+    max-w:4xl
+    mx:auto
+    p:8
+}
+
+@utility
+page_title {
+    text:4xl
+    font:bold
+    mb:8
+    color:gray-900
+}
+
+@utility
+card_content {
+    text:base
+    color:gray-700
+    leading:relaxed
+}
+
+<div class:(container)>
+    <h1 class:(page_title)>Card Component Demo</h1>
+
+    // Using Card component with props
+    <Card title="First Card" subtitle="This is the first card">
+        <p class:(card_content)>
+            This is the main content of the first card.
+            It demonstrates how to use slots to pass content to a component.
+        </p>
+    </Card>
+
+    // Using Card with custom footer slot
+    <Card title="Second Card" subtitle="Card with custom footer">
+        <p class:(card_content)>
+            This card has a custom footer instead of the default one.
+        </p>
+
+        <div slot:footer>
+            <p>Custom footer for the second card!</p>
+        </div>
+    </Card>
+
+    // Using Card without subtitle (optional prop)
+    <Card title="Third Card">
+        <p class:(card_content)>
+            This card doesn't have a subtitle because it's an optional prop.
+            The footer will use the default fallback content.
+        </p>
+    </Card>
+</div>

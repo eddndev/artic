@@ -57,6 +57,24 @@ public:
 };
 
 /**
+ * @brief Slot directive: slot:name attribute
+ *
+ * Used to assign content to a named slot:
+ * <button slot:footer>Close</button>
+ */
+class SlotDirective : public ASTNode {
+public:
+    std::string slotName;  // Name of the slot to assign to
+
+    SlotDirective(const std::string& name, SourceLocation location = SourceLocation())
+        : ASTNode(ASTNodeType::SLOT_DIRECTIVE, location), slotName(name) {}
+
+    std::string toString() const override {
+        return "slot:" + slotName;
+    }
+};
+
+/**
  * @brief Text node in template
  */
 class TextNode : public TemplateNode {
@@ -94,6 +112,7 @@ public:
     std::string tagName;                                  // Tag name (div, h1, Card, etc.)
     std::vector<std::unique_ptr<Attribute>> attributes;   // HTML attributes (name="value")
     std::vector<std::unique_ptr<ClassDirective>> classDirectives; // class:() directives
+    std::unique_ptr<SlotDirective> slotDirective;         // slot:name directive (optional)
     std::vector<std::unique_ptr<TemplateNode>> children; // Child nodes
     bool isSelfClosing;                                   // true for <img /> etc.
 
@@ -106,6 +125,10 @@ public:
 
     void addClassDirective(std::unique_ptr<ClassDirective> directive) {
         classDirectives.push_back(std::move(directive));
+    }
+
+    void setSlotDirective(std::unique_ptr<SlotDirective> directive) {
+        slotDirective = std::move(directive);
     }
 
     void addChild(std::unique_ptr<TemplateNode> child) {
@@ -151,6 +174,45 @@ public:
 
     std::string toString() const override {
         return "{/* " + comment + " */}";
+    }
+};
+
+/**
+ * @brief Slot node: <slot /> or <slot:name />
+ *
+ * Examples:
+ * - <slot /> → default slot
+ * - <slot:header /> → named slot "header"
+ * - <slot:footer>Default content</slot:footer> → slot with fallback
+ */
+class SlotNode : public TemplateNode {
+public:
+    std::string name;  // Empty string = default slot, otherwise named slot
+    std::vector<std::unique_ptr<TemplateNode>> fallback; // Fallback content (optional)
+
+    SlotNode(const std::string& slotName = "", SourceLocation location = SourceLocation())
+        : TemplateNode(ASTNodeType::SLOT_NODE, location), name(slotName) {}
+
+    void addFallback(std::unique_ptr<TemplateNode> node) {
+        fallback.push_back(std::move(node));
+    }
+
+    bool hasName() const {
+        return !name.empty();
+    }
+
+    bool hasFallback() const {
+        return !fallback.empty();
+    }
+
+    std::string toString() const override {
+        if (name.empty()) {
+            return hasFallback() ? "<slot>...</slot>" : "<slot />";
+        } else {
+            return hasFallback()
+                ? "<slot:" + name + ">...</slot:" + name + ">"
+                : "<slot:" + name + " />";
+        }
     }
 };
 

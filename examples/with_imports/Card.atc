@@ -1,0 +1,58 @@
+// Reusable Card component with props and slots
+
+props {
+    title: string,
+    subtitle?: string
+}
+
+@utility
+card {
+    bg:white
+    rounded:lg
+    shadow:md
+    p:6
+    mb:4
+}
+
+@utility
+card_title {
+    text:2xl
+    font:bold
+    mb:2
+    color:gray-900
+}
+
+@utility
+card_subtitle {
+    text:sm
+    color:gray-600
+    mb:4
+}
+
+@utility
+card_footer {
+    mt:4
+    pt:4
+    border-t:1
+    border-color:gray-200
+    text:sm
+    color:gray-500
+}
+
+<article class:(card)>
+    <h2 class:(card_title)>{title}</h2>
+
+    <p class:(card_subtitle)>{subtitle}</p>
+
+    // Default slot: main content
+    <div>
+        <slot />
+    </div>
+
+    // Named slot: footer with fallback
+    <div class:(card_footer)>
+        <slot:footer>
+            <p>Default footer content</p>
+        </slot:footer>
+    </div>
+</article>

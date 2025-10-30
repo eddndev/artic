@@ -3,25 +3,22 @@
 @utility
 container {
     w:full
-    max-w:4xl
-    mx:auto
     px:4
     py:8
 }
 
 @utility
 title {
-    text:4xl
+    text:3xl
     font:bold
-    text:center
-    mb:4
 }
 
-<div class:(container)>
-    <h1 class:(title)>
-        Hello, World!
-    </h1>
-    <p class:(text:center text:gray-700)>
-        Welcome to Artic - A unified language for web development
-    </p>
+@utility
+text {
+    text:lg
+}
+
+<div class:(container title)>
+    <h1 class:(title)>Hello, World!</h1>
+    <p class:(text)>Welcome to Artic - A unified language for web development</p>
 </div>

@@ -22,6 +22,11 @@ enum class ASTNodeType {
     THEME_IMPORT,
     NAMED_IMPORT,
 
+    // Props
+    PROP_TYPE,
+    PROP_DECLARATION,
+    PROPS_BLOCK,
+
     // Styles
     UTILITY_DECLARATION,
     UTILITY_TOKEN,
@@ -31,6 +36,7 @@ enum class ASTNodeType {
     TEXT_NODE,
     EXPRESSION_NODE,
     COMMENT_NODE,
+    SLOT_NODE,
 
     // Attributes and Directives
     ATTRIBUTE,

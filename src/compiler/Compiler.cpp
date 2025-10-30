@@ -20,53 +20,26 @@ bool Compiler::compile() {
     logVerbose("Input file: " + m_options.inputFile);
     logVerbose("Output directory: " + m_options.outputDir);
 
-    // 1. Read source file
-    std::string source;
-    if (!readSourceFile(source)) {
-        return false;
-    }
-
-    logVerbose("Source file read successfully (" + std::to_string(source.size()) + " bytes)");
-
-    // 2. Lex
+    // 1. Load component with registry (this also loads all imports)
     log("Lexing...");
-    std::vector<Token> tokens;
-    try {
-        tokens = lex(source);
-    } catch (const std::exception& e) {
-        logError("Lexer error: " + std::string(e.what()));
-        return false;
-    }
-
-    logVerbose("Generated " + std::to_string(tokens.size()) + " tokens");
-
-    // 3. Parse
     log("Parsing...");
-    std::unique_ptr<Component> component;
-    try {
-        component = parse(tokens);
-    } catch (const ParseError& e) {
-        logError("Parser error: " + std::string(e.what()));
-        return false;
-    } catch (const std::exception& e) {
-        logError("Unexpected error during parsing: " + std::string(e.what()));
-        return false;
-    }
+    Component* component = loadComponentWithRegistry(m_options.inputFile);
 
     if (!component) {
-        logError("Failed to parse component");
+        logError("Failed to load component");
         return false;
     }
 
-    logVerbose("AST built successfully");
+    logVerbose("Component loaded successfully");
     logVerbose("  Utilities: " + std::to_string(component->utilities.size()));
     logVerbose("  Template nodes: " + std::to_string(component->templateNodes.size()));
+    logVerbose("  Imported components: " + std::to_string(m_registry.getAllComponents().size() - 1));
 
-    // 4. Generate CSS
+    // 2. Generate CSS
     log("Generating CSS...");
     std::string css;
     try {
-        css = generateCss(component.get());
+        css = generateCss(component);
     } catch (const std::exception& e) {
         logError("CSS generation error: " + std::string(e.what()));
         return false;
@@ -74,11 +47,11 @@ bool Compiler::compile() {
 
     logVerbose("Generated " + std::to_string(css.size()) + " bytes of CSS");
 
-    // 5. Generate HTML
+    // 3. Generate HTML
     log("Generating HTML...");
     std::string html;
     try {
-        html = generateHtml(component.get());
+        html = generateHtml(component);
     } catch (const std::exception& e) {
         logError("HTML generation error: " + std::string(e.what()));
         return false;
@@ -102,42 +75,17 @@ bool Compiler::compile() {
 CompilationResult Compiler::compileToString() {
     CompilationResult result;
 
-    // Read source
-    std::string source;
-    if (!readSourceFile(source)) {
-        result.errorMessage = m_lastError;
-        return result;
-    }
-
-    // Lex
-    std::vector<Token> tokens;
-    try {
-        tokens = lex(source);
-    } catch (const std::exception& e) {
-        result.errorMessage = "Lexer error: " + std::string(e.what());
-        return result;
-    }
-
-    // Parse
-    std::unique_ptr<Component> component;
-    try {
-        component = parse(tokens);
-    } catch (const ParseError& e) {
-        result.errorMessage = "Parser error: " + std::string(e.what());
-        return result;
-    } catch (const std::exception& e) {
-        result.errorMessage = "Unexpected error: " + std::string(e.what());
-        return result;
-    }
+    // Load component with registry
+    Component* component = loadComponentWithRegistry(m_options.inputFile);
 
     if (!component) {
-        result.errorMessage = "Failed to parse component";
+        result.errorMessage = "Failed to load component";
         return result;
     }
 
     // Generate CSS
     try {
-        result.generatedCss = generateCss(component.get());
+        result.generatedCss = generateCss(component);
     } catch (const std::exception& e) {
         result.errorMessage = "CSS generation error: " + std::string(e.what());
         return result;
@@ -145,7 +93,7 @@ CompilationResult Compiler::compileToString() {
 
     // Generate HTML
     try {
-        result.generatedHtml = generateHtml(component.get());
+        result.generatedHtml = generateHtml(component);
     } catch (const std::exception& e) {
         result.errorMessage = "HTML generation error: " + std::string(e.what());
         return result;
@@ -191,6 +139,10 @@ std::unique_ptr<Component> Compiler::parse(const std::vector<Token>& tokens) {
     return parser.parse();
 }
 
+Component* Compiler::loadComponentWithRegistry(const std::string& filePath) {
+    return m_registry.loadComponent(filePath);
+}
+
 std::string Compiler::generateCss(Component* component) {
     CssGeneratorOptions cssOptions;
     cssOptions.minify = m_options.minifyCss;
@@ -207,7 +159,8 @@ std::string Compiler::generateHtml(Component* component) {
     htmlOptions.indentSize = m_options.indentSize;
     htmlOptions.minify = m_options.minifyHtml;
 
-    HtmlGenerator generator(htmlOptions);
+    // Pass registry to enable component expansion
+    HtmlGenerator generator(htmlOptions, &m_registry);
     return generator.generate(component);
 }
 

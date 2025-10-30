@@ -16,7 +16,7 @@ std::unique_ptr<Component> Parser::parse() {
     // Skip leading newlines
     skipNewlines();
 
-    // Parse in order: metadata → imports → utilities → template
+    // Parse in order: metadata → imports → props → utilities → template
 
     // 1. Metadata (@route, @layout)
     parseMetadata(component.get());
@@ -24,10 +24,13 @@ std::unique_ptr<Component> Parser::parse() {
     // 2. Imports (use statements)
     parseImports(component.get());
 
-    // 3. Utilities (@utility declarations)
+    // 3. Props (optional, only for reusable components)
+    parseProps(component.get());
+
+    // 4. Utilities (@utility declarations)
     parseUtilities(component.get());
 
-    // 4. Template (required)
+    // 5. Template (required)
     parseTemplate(component.get());
 
     return component;
@@ -193,6 +196,148 @@ std::unique_ptr<NamedImport> Parser::parseNamedImport() {
     );
 }
 
+// ===== Props parsing =====
+
+void Parser::parseProps(Component* component) {
+    skipNewlines();
+
+    if (check(TokenType::PROPS)) {
+        component->props = parsePropsBlock();
+        skipNewlines();
+    }
+}
+
+std::unique_ptr<PropsBlock> Parser::parsePropsBlock() {
+    Token propsToken = expect(TokenType::PROPS, "Expected 'props'");
+    skipNewlines();
+
+    expect(TokenType::LBRACE, "Expected '{' after 'props'");
+    skipNewlines();
+
+    auto propsBlock = std::make_unique<PropsBlock>(
+        SourceLocation(propsToken.line, propsToken.column, 0)
+    );
+
+    // Parse prop declarations until }
+    while (!check(TokenType::RBRACE) && !isAtEnd()) {
+        skipNewlines();
+
+        if (check(TokenType::RBRACE)) {
+            break;
+        }
+
+        auto prop = parsePropDeclaration();
+        if (prop) {
+            propsBlock->addProp(std::move(prop));
+        }
+
+        // Expect comma or newline between props
+        if (match(TokenType::COMMA)) {
+            skipNewlines();
+        } else {
+            skipNewlines();
+        }
+    }
+
+    expect(TokenType::RBRACE, "Expected '}' after props block");
+
+    return propsBlock;
+}
+
+std::unique_ptr<PropDeclaration> Parser::parsePropDeclaration() {
+    // Parse prop name
+    Token nameToken = expect(TokenType::IDENTIFIER, "Expected prop name");
+    std::string propName = nameToken.lexeme;
+
+    // Check for optional ?
+    bool optional = match(TokenType::QUESTION);
+
+    // Expect :
+    expect(TokenType::COLON, "Expected ':' after prop name");
+    skipNewlines();
+
+    // Parse type (simple version - just collect tokens until comma/equals/rbrace)
+    auto propType = parsePropType();
+
+    // Check for default value (= defaultValue)
+    std::string defaultValue;
+    if (match(TokenType::EQUALS)) {
+        skipNewlines();
+        // Collect default value until comma or newline or rbrace
+        defaultValue = collectUntil({TokenType::COMMA, TokenType::NEWLINE, TokenType::RBRACE});
+    }
+
+    return std::make_unique<PropDeclaration>(
+        propName,
+        std::move(propType),
+        optional,
+        defaultValue,
+        SourceLocation(nameToken.line, nameToken.column, 0)
+    );
+}
+
+std::unique_ptr<PropType> Parser::parsePropType() {
+    // Phase 1: Simple type parsing - just collect tokens until , = or }
+    // Examples: string, number, "primary" | "secondary", string[], etc.
+
+    std::string typeString;
+    int parenDepth = 0;
+    int bracketDepth = 0;
+
+    while (!isAtEnd()) {
+        // Stop conditions
+        if (parenDepth == 0 && bracketDepth == 0) {
+            if (check(TokenType::COMMA) || check(TokenType::EQUALS) ||
+                check(TokenType::RBRACE) || check(TokenType::NEWLINE)) {
+                break;
+            }
+        }
+
+        Token t = advance();
+
+        // Track nesting
+        if (t.type == TokenType::LPAREN) parenDepth++;
+        if (t.type == TokenType::RPAREN) parenDepth--;
+        if (t.type == TokenType::LBRACKET) bracketDepth++;
+        if (t.type == TokenType::RBRACKET) bracketDepth--;
+
+        // Add to type string
+        if (!typeString.empty() && typeString.back() != '(' && typeString.back() != '[') {
+            typeString += " ";
+        }
+        typeString += t.lexeme;
+    }
+
+    return std::make_unique<PropType>(typeString);
+}
+
+std::string Parser::collectUntil(const std::vector<TokenType>& stopTokens) {
+    std::string result;
+
+    while (!isAtEnd()) {
+        // Check if we hit a stop token
+        bool shouldStop = false;
+        for (auto stopType : stopTokens) {
+            if (check(stopType)) {
+                shouldStop = true;
+                break;
+            }
+        }
+
+        if (shouldStop) {
+            break;
+        }
+
+        Token t = advance();
+        if (!result.empty()) {
+            result += " ";
+        }
+        result += t.lexeme;
+    }
+
+    return result;
+}
+
 // ===== Utility parsing =====
 
 void Parser::parseUtilities(Component* component) {
@@ -232,6 +377,7 @@ std::vector<std::unique_ptr<UtilityToken>> Parser::parseUtilityTokens() {
     std::vector<std::unique_ptr<UtilityToken>> tokens;
 
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
+        size_t positionBefore = m_position;
         skipNewlines();
 
         if (check(TokenType::RBRACE)) {
@@ -241,6 +387,11 @@ std::vector<std::unique_ptr<UtilityToken>> Parser::parseUtilityTokens() {
         auto token = parseUtilityToken();
         if (token) {
             tokens.push_back(std::move(token));
+        }
+
+        // Safety check: if we didn't advance, force advancement to prevent infinite loop
+        if (m_position == positionBefore && !check(TokenType::RBRACE) && !isAtEnd()) {
+            advance(); // Force advance to prevent infinite loop
         }
 
         skipNewlines();
@@ -259,22 +410,48 @@ std::unique_ptr<UtilityToken> Parser::parseUtilityToken() {
     std::string property = first.lexeme;
     std::string value;
 
-    // Check for prefix:property:value (e.g., hover:bg:blue)
+    // Check for colon (property:value or prefix:property:value)
     if (match(TokenType::COLON)) {
-        if (check(TokenType::IDENTIFIER)) {
-            prefix = property;
-            property = advance().lexeme;
+        // Next could be a value or another property
+        if (check(TokenType::IDENTIFIER) || check(TokenType::NUMBER)) {
+            Token second = advance();
 
+            // Check if there's another colon (prefix:property:value case)
             if (match(TokenType::COLON)) {
+                // This was prefix:property:value
+                prefix = property;
+                property = second.lexeme;
+
+                // Now parse the value
                 if (check(TokenType::IDENTIFIER) || check(TokenType::NUMBER)) {
                     Token valueToken = advance();
                     value = valueToken.lexeme;
+
+                    // Handle adjacent identifier after number (3xl, 2xl, etc.)
+                    if (valueToken.type == TokenType::NUMBER && check(TokenType::IDENTIFIER)) {
+                        value += advance().lexeme;
+                    }
 
                     // Handle compound values like "blue-500"
                     while (match(TokenType::MINUS)) {
                         if (check(TokenType::IDENTIFIER) || check(TokenType::NUMBER)) {
                             value += "-" + advance().lexeme;
                         }
+                    }
+                }
+            } else {
+                // This was property:value (2 parts)
+                value = second.lexeme;
+
+                // Handle adjacent identifier after number (3xl, 2xl, etc.)
+                if (second.type == TokenType::NUMBER && check(TokenType::IDENTIFIER)) {
+                    value += advance().lexeme;
+                }
+
+                // Handle compound values like "blue-500"
+                while (match(TokenType::MINUS)) {
+                    if (check(TokenType::IDENTIFIER) || check(TokenType::NUMBER)) {
+                        value += "-" + advance().lexeme;
                     }
                 }
             }
@@ -305,7 +482,12 @@ void Parser::parseTemplate(Component* component) {
 
 std::unique_ptr<TemplateNode> Parser::parseTemplateNode() {
     if (check(TokenType::LT)) {
-        return parseElement();
+        // Peek ahead to check if it's a slot node
+        if (peek(1).type == TokenType::SLOT) {
+            return parseSlotNode();
+        } else {
+            return parseElement();
+        }
     } else if (check(TokenType::LBRACE)) {
         return parseExpressionNode();
     } else {
@@ -341,6 +523,8 @@ std::unique_ptr<Element> Parser::parseElement() {
 
     // Parse children (until closing tag)
     while (!check(TokenType::LT_SLASH) && !isAtEnd()) {
+        size_t positionBefore = m_position;
+
         // Check for text content
         if (!check(TokenType::LT) && !check(TokenType::LBRACE)) {
             auto textNode = parseTextNode();
@@ -352,6 +536,11 @@ std::unique_ptr<Element> Parser::parseElement() {
             if (child) {
                 element->addChild(std::move(child));
             }
+        }
+
+        // Safety check: if we didn't advance, force advancement to prevent infinite loop
+        if (m_position == positionBefore && !check(TokenType::LT_SLASH) && !isAtEnd()) {
+            advance(); // Force advance to prevent infinite loop
         }
 
         // Break if we hit the closing tag
@@ -375,6 +564,7 @@ std::unique_ptr<Element> Parser::parseElement() {
 
 void Parser::parseAttributesAndDirectives(Element* element) {
     while (!check(TokenType::GT) && !check(TokenType::SLASH_GT) && !isAtEnd()) {
+        size_t positionBefore = m_position;
         skipNewlines();
 
         if (check(TokenType::GT) || check(TokenType::SLASH_GT)) {
@@ -390,6 +580,13 @@ void Parser::parseAttributesAndDirectives(Element* element) {
                 element->addClassDirective(parseClassDirective());
                 continue;
             }
+        }
+
+        // Check for slot:name directive
+        if (check(TokenType::SLOT) && peek(1).type == TokenType::COLON) {
+            advance(); // consume "slot"
+            element->setSlotDirective(parseSlotDirective());
+            continue;
         }
 
         // Regular attribute
@@ -424,7 +621,10 @@ void Parser::parseAttributesAndDirectives(Element* element) {
                 ));
             }
         } else {
-            break;
+            // Safety: if we couldn't parse anything, break to avoid infinite loop
+            if (m_position == positionBefore) {
+                break;
+            }
         }
     }
 }
@@ -460,6 +660,13 @@ std::unique_ptr<ClassDirective> Parser::parseClassDirective() {
     return std::make_unique<ClassDirective>(tokens);
 }
 
+std::unique_ptr<SlotDirective> Parser::parseSlotDirective() {
+    expect(TokenType::COLON, "Expected ':' after 'slot'");
+    Token nameToken = expect(TokenType::IDENTIFIER, "Expected slot name after 'slot:'");
+
+    return std::make_unique<SlotDirective>(nameToken.lexeme);
+}
+
 std::unique_ptr<TextNode> Parser::parseTextNode() {
     std::string text = collectText();
 
@@ -480,6 +687,78 @@ std::unique_ptr<ExpressionNode> Parser::parseExpressionNode() {
     return std::make_unique<ExpressionNode>(expr);
 }
 
+std::unique_ptr<SlotNode> Parser::parseSlotNode() {
+    Token ltToken = expect(TokenType::LT, "Expected '<'");
+    expect(TokenType::SLOT, "Expected 'slot'");
+
+    std::string slotName;
+
+    // Check for :name (named slot)
+    if (match(TokenType::COLON)) {
+        Token nameToken = expect(TokenType::IDENTIFIER, "Expected slot name after ':'");
+        slotName = nameToken.lexeme;
+    }
+
+    auto slotNode = std::make_unique<SlotNode>(
+        slotName,
+        SourceLocation(ltToken.line, ltToken.column, 0)
+    );
+
+    // Check for self-closing />
+    if (match(TokenType::SLASH_GT)) {
+        return slotNode;
+    }
+
+    // Expect >
+    expect(TokenType::GT, "Expected '>' or '/>'");
+
+    // Parse fallback content until closing tag
+    while (!check(TokenType::LT_SLASH) && !isAtEnd()) {
+        size_t positionBefore = m_position;
+
+        // Check for text content
+        if (!check(TokenType::LT) && !check(TokenType::LBRACE)) {
+            auto textNode = parseTextNode();
+            if (textNode && !textNode->text.empty()) {
+                slotNode->addFallback(std::move(textNode));
+            }
+        } else {
+            auto child = parseTemplateNode();
+            if (child) {
+                slotNode->addFallback(std::move(child));
+            }
+        }
+
+        // Safety check
+        if (m_position == positionBefore && !check(TokenType::LT_SLASH) && !isAtEnd()) {
+            advance();
+        }
+
+        if (check(TokenType::LT_SLASH)) {
+            break;
+        }
+    }
+
+    // Parse closing tag: </slot> or </slot:name>
+    expect(TokenType::LT_SLASH, "Expected '</'");
+    expect(TokenType::SLOT, "Expected 'slot' in closing tag");
+
+    // If named slot, expect :name in closing tag too
+    if (!slotName.empty()) {
+        expect(TokenType::COLON, "Expected ':' in closing tag");
+        Token closingNameToken = expect(TokenType::IDENTIFIER, "Expected slot name in closing tag");
+
+        if (closingNameToken.lexeme != slotName) {
+            throw error("Closing slot name '" + closingNameToken.lexeme +
+                       "' doesn't match opening slot name '" + slotName + "'");
+        }
+    }
+
+    expect(TokenType::GT, "Expected '>' after closing slot tag");
+
+    return slotNode;
+}
+
 std::string Parser::collectText() {
     std::string text;
 
@@ -492,9 +771,24 @@ std::string Parser::collectText() {
            !isAtEnd()) {
 
         Token t = advance();
+
+        // Add space before token only if:
+        // 1. Text is not empty
+        // 2. Token is not punctuation
+        // 3. Previous character is not punctuation
         if (!text.empty()) {
-            text += " ";
+            char lastChar = text.back();
+            std::string punctuation = ".,!?;:";
+
+            // Don't add space before punctuation
+            if (punctuation.find(t.lexeme[0]) == std::string::npos) {
+                // Don't add space if last char was opening punctuation
+                if (lastChar != '(' && lastChar != '{' && lastChar != '[') {
+                    text += " ";
+                }
+            }
         }
+
         text += t.lexeme;
     }
 

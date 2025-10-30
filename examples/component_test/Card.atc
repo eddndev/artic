@@ -1,0 +1,37 @@
+props {
+    title: string,
+    subtitle?: string
+}
+
+@utility
+card {
+    bg:white
+    rounded:lg
+    shadow:md
+    p:6
+}
+
+@utility
+title {
+    text:2xl
+    font:bold
+    mb:2
+}
+
+@utility
+subtitle {
+    text:gray-600
+    mb:4
+}
+
+<article class:(card)>
+    <h2 class:(title)>{props.title}</h2>
+
+    <p class:(subtitle)>{props.subtitle}</p>
+
+    <slot />
+
+    <slot:footer>
+        <p>Default footer</p>
+    </slot:footer>
+</article>

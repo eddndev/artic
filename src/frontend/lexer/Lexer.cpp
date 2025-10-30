@@ -14,6 +14,7 @@ void Lexer::initKeywords() {
     m_keywords["from"] = TokenType::FROM;
     m_keywords["theme"] = TokenType::THEME;
     m_keywords["props"] = TokenType::PROPS;
+    m_keywords["slot"] = TokenType::SLOT;
     m_keywords["export"] = TokenType::EXPORT;
 
     // Boolean literals
@@ -202,7 +203,10 @@ Token Lexer::scanIdentifier() {
     // First character (already validated as alpha, _, or $)
     lexeme += advance();
 
-    // Continue with alphanumeric or underscore
+    // Continue with alphanumeric, underscore, or dollar sign
+    // Note: Hyphens are NOT allowed in identifiers to avoid ambiguity with minus operator
+    // Use snake_case for utilities: btn_primary, card_title (not btn-primary, card-title)
+    // Hyphens are only valid inside CSS properties: border-color:gray, max-w:4xl
     while (!isAtEnd() && (isAlphaNumeric(peek()) || peek() == '_' || peek() == '$')) {
         lexeme += advance();
     }

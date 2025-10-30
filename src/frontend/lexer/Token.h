@@ -19,6 +19,7 @@ enum class TokenType {
     FROM,          // from
     THEME,         // theme
     PROPS,         // props
+    SLOT,          // slot
     EXPORT,        // export
 
     // Decorators

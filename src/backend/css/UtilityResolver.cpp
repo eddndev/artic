@@ -171,20 +171,21 @@ std::vector<std::string> UtilityResolver::resolve(const std::string& property, c
         return declarations;
     }
 
+    // Check text:size BEFORE text:color (font-size takes priority)
+    if (property == "text" && m_fontSizes.count(value)) {
+        // Font size
+        auto [fontSize, lineHeight] = resolveFontSize(value);
+        declarations.push_back("font-size: " + fontSize);
+        declarations.push_back("line-height: " + lineHeight);
+        return declarations;
+    }
+
     if (property == "bg" || property == "text") {
         // Color properties
         std::string resolved = resolveColor(value);
         for (const auto& cssProp : cssProps) {
             declarations.push_back(cssProp + ": " + resolved);
         }
-        return declarations;
-    }
-
-    if (property == "text" && m_fontSizes.count(value)) {
-        // Font size
-        auto [fontSize, lineHeight] = resolveFontSize(value);
-        declarations.push_back("font-size: " + fontSize);
-        declarations.push_back("line-height: " + lineHeight);
         return declarations;
     }
 
